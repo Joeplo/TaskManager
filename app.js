@@ -33,14 +33,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Auth State Observer ---
     auth.onAuthStateChanged(async user => {
-        if (!sessionStorage.getItem('splashShown')) {
-            setTimeout(hideSplashScreen, 2000); 
-        } else {
-            hideSplashScreen();
-        }
-
         const isLoginPage = window.location.pathname.includes('login.html');
         const isRegisterPage = window.location.pathname.includes('register.html');
+
+        // Ensures splash is handled correctly on auth pages
+        if (isLoginPage || isRegisterPage) {
+            if (!sessionStorage.getItem('splashShown')) {
+                setTimeout(hideSplashScreen, 1000); // Shorter delay on auth pages
+            } else {
+                hideSplashScreen();
+            }
+        } else {
+            if (!sessionStorage.getItem('splashShown')) {
+                setTimeout(hideSplashScreen, 2000); 
+            } else {
+                hideSplashScreen();
+            }
+        }
+
         const isCategoryPage = window.location.pathname.includes('kategori.html');
         const isProfilePage = window.location.pathname.includes('profil.html');
 
