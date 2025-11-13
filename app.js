@@ -32,60 +32,57 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Auth State Observer ---
-    setTimeout(() => {
-        auth.onAuthStateChanged(async user => {
-            const isLoginPage = window.location.pathname.includes('login.html');
-            const isRegisterPage = window.location.pathname.includes('register.html');
+    auth.onAuthStateChanged(async user => {
+        const isLoginPage = window.location.pathname.includes('login.html');
+        const isRegisterPage = window.location.pathname.includes('register.html');
 
-            // Ensures splash is handled correctly on auth pages
+        // If on an auth page and not logged in, just show the page and do nothing else.
+        // This prevents redirect loops during initial auth state checking.
+        if (!user && (isLoginPage || isRegisterPage)) {
+            hideSplashScreen();
+            return; 
+        }
+
+        // Fallback for splash screen on other pages
+        if (!sessionStorage.getItem('splashShown')) {
+            setTimeout(hideSplashScreen, 1000);
+        } else {
+            hideSplashScreen();
+        }
+
+        const isCategoryPage = window.location.pathname.includes('kategori.html');
+        const isProfilePage = window.location.pathname.includes('profil.html');
+
+        if (user) {
+            currentUser = user;
+            // Fetch user data from Firestore
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+                currentUserData = userDoc.data();
+            }
+
             if (isLoginPage || isRegisterPage) {
-                if (!sessionStorage.getItem('splashShown')) {
-                    setTimeout(hideSplashScreen, 1000); // Shorter delay on auth pages
-                } else {
-                    hideSplashScreen();
-                }
+                window.location.href = 'index.html';
             } else {
-                if (!sessionStorage.getItem('splashShown')) {
-                    setTimeout(hideSplashScreen, 2000); 
-                } else {
-                    hideSplashScreen();
-                }
+                // Update navbar with user info
+                const welcomeMsg = document.getElementById('welcome-message');
+                welcomeMsg.textContent = currentUserData.name || user.email;
+                document.getElementById('logout-btn').addEventListener('click', () => auth.signOut());
+
+                // Route to the correct page loader
+                if (isCategoryPage) loadCategoryPage();
+                else if (isProfilePage) loadProfilePage();
+                else loadApp();
             }
-
-            const isCategoryPage = window.location.pathname.includes('kategori.html');
-            const isProfilePage = window.location.pathname.includes('profil.html');
-
-            if (user) {
-                currentUser = user;
-                // Fetch user data from Firestore
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                if (userDoc.exists) {
-                    currentUserData = userDoc.data();
-                }
-
-                if (isLoginPage || isRegisterPage) {
-                    window.location.href = 'index.html';
-                } else {
-                    // Update navbar with user info
-                    const welcomeMsg = document.getElementById('welcome-message');
-                    // Removed profile picture display logic from navbar
-                    welcomeMsg.textContent = currentUserData.name || user.email;
-                    document.getElementById('logout-btn').addEventListener('click', () => auth.signOut());
-
-                    // Route to the correct page loader
-                    if (isCategoryPage) loadCategoryPage();
-                    else if (isProfilePage) loadProfilePage();
-                    else loadApp();
-                }
-            } else {
-                currentUser = null;
-                currentUserData = {};
-                if (!isLoginPage && !isRegisterPage) {
-                    window.location.href = 'login.html';
-                }
+        } else {
+            currentUser = null;
+            currentUserData = {};
+            // This will now only run for protected pages, not login/register
+            if (!isLoginPage && !isRegisterPage) {
+                window.location.href = 'login.html';
             }
-        });
-    }, 250); // A small delay to ensure the DOM is ready and scripts are loaded.
+        }
+    });
 
     // --- Login/Register Handlers ---
     const loginForm = document.getElementById('login-form');
